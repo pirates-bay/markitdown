@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarkItDown</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 20px 32px;
+      border-bottom: 1px solid #1e2533;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    header span {
+      font-size: 0.75rem;
+      background: #1e3a5f;
+      color: #60a5fa;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+      overflow: hidden;
+      height: calc(100vh - 61px);
+    }
+
+    /* LEFT PANEL */
+    .left {
+      border-right: 1px solid #1e2533;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .drop-zone {
+      border: 2px dashed #2d3748;
+      border-radius: 12px;
+      padding: 40px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: #3b82f6;
+      background: #0d1f3c;
+    }
+
+    .drop-zone svg {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 12px;
+      color: #4b5563;
+    }
+
+    .drop-zone p {
+      font-size: 0.9rem;
+      color: #6b7280;
+      line-height: 1.5;
+    }
+
+    .drop-zone p strong {
+      color: #3b82f6;
+    }
+
+    #file-input { display: none; }
+
+    .formats {
+      background: #141824;
+      border: 1px solid #1e2533;
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .formats h3 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #4b5563;
+      margin-bottom: 12px;
+    }
+
+    .format-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      background: #1e2533;
+      color: #9ca3af;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+
+    .file-info {
+      background: #141824;
+      border: 1px solid #1e2533;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .file-info.visible { display: flex; }
+
+    .file-icon {
+      width: 36px;
+      height: 36px;
+      background: #1e3a5f;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: #60a5fa;
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
+    .file-meta { flex: 1; min-width: 0; }
+    .file-meta .name {
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .file-meta .size { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: #fff;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #2563eb; }
+
+    .btn-ghost {
+      background: #1e2533;
+      color: #9ca3af;
+    }
+
+    .btn-ghost:hover:not(:disabled) { background: #2d3748; color: #e2e8f0; }
+
+    /* RIGHT PANEL */
+    .right {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .output-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #1e2533;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .output-header h2 {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #9ca3af;
+    }
+
+    .output-actions { display: flex; gap: 8px; }
+
+    .output-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .empty-state {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #374151;
+      gap: 12px;
+    }
+
+    .empty-state svg { width: 48px; height: 48px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    #markdown-output {
+      display: none;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #d1d5db;
+      background: #141824;
+      border: 1px solid #1e2533;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    #markdown-output.visible { display: block; }
+
+    .spinner {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 14px;
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+
+    .spinner.visible { display: flex; }
+
+    .spin {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #1e2533;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e2533;
+      color: #e2e8f0;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .error-msg {
+      background: #2d1515;
+      border: 1px solid #7f1d1d;
+      color: #fca5a5;
+      padding: 14px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    .error-msg.visible { display: block; }
+  </style>
+</head>
+<body>
+
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+  <h1>MarkItDown</h1>
+  <span>Local</span>
+</header>
+
+<main>
+  <!-- LEFT -->
+  <div class="left">
+    <div class="drop-zone" id="drop-zone">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 16 12 12 8 16"/>
+        <line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+      </svg>
+      <p><strong>Click to upload</strong> or drag & drop</p>
+      <p style="margin-top: 6px; font-size: 0.78rem;">PDF, Word, Excel, PowerPoint, HTML, images & more</p>
+      <input type="file" id="file-input" />
+    </div>
+
+    <div class="file-info" id="file-info">
+      <div class="file-icon" id="file-ext">–</div>
+      <div class="file-meta">
+        <div class="name" id="file-name">–</div>
+        <div class="size" id="file-size">–</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="convert-btn" disabled>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+      </svg>
+      Convert to Markdown
+    </button>
+
+    <div class="formats">
+      <h3>Supported formats</h3>
+      <div class="format-grid">
+        <span class="badge">PDF</span>
+        <span class="badge">DOCX</span>
+        <span class="badge">PPTX</span>
+        <span class="badge">XLSX</span>
+        <span class="badge">HTML</span>
+        <span class="badge">CSV</span>
+        <span class="badge">JSON</span>
+        <span class="badge">XML</span>
+        <span class="badge">TXT</span>
+        <span class="badge">JPG</span>
+        <span class="badge">PNG</span>
+        <span class="badge">MP3</span>
+        <span class="badge">WAV</span>
+        <span class="badge">EPUB</span>
+        <span class="badge">ZIP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="output-header">
+      <h2 id="output-title">Output</h2>
+      <div class="output-actions">
+        <button class="btn btn-ghost" id="copy-btn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          Copy
+        </button>
+        <button class="btn btn-ghost" id="download-btn" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download
+        </button>
+      </div>
+    </div>
+
+    <div class="output-body">
+      <div class="empty-state" id="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <p>Your converted Markdown will appear here</p>
+      </div>
+
+      <div class="spinner" id="spinner">
+        <div class="spin"></div>
+        <p>Converting…</p>
+      </div>
+
+      <div class="error-msg" id="error-msg"></div>
+      <pre id="markdown-output"></pre>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast">Copied to clipboard!</div>
+
+<script>
+  const dropZone = document.getElementById("drop-zone");
+  const fileInput = document.getElementById("file-input");
+  const convertBtn = document.getElementById("convert-btn");
+  const copyBtn = document.getElementById("copy-btn");
+  const downloadBtn = document.getElementById("download-btn");
+  const fileInfo = document.getElementById("file-info");
+  const fileExt = document.getElementById("file-ext");
+  const fileName = document.getElementById("file-name");
+  const fileSize = document.getElementById("file-size");
+  const output = document.getElementById("markdown-output");
+  const emptyState = document.getElementById("empty-state");
+  const spinner = document.getElementById("spinner");
+  const errorMsg = document.getElementById("error-msg");
+  const outputTitle = document.getElementById("output-title");
+  const toast = document.getElementById("toast");
+
+  let selectedFile = null;
+  let lastMarkdown = "";
+  let lastFilename = "";
+
+  function formatBytes(b) {
+    if (b < 1024) return b + " B";
+    if (b < 1024 * 1024) return (b / 1024).toFixed(1) + " KB";
+    return (b / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    const ext = file.name.split(".").pop().toUpperCase();
+    fileExt.textContent = ext.slice(0, 4);
+    fileName.textContent = file.name;
+    fileSize.textContent = formatBytes(file.size);
+    fileInfo.classList.add("visible");
+    convertBtn.disabled = false;
+    // reset output
+    output.classList.remove("visible");
+    output.textContent = "";
+    emptyState.style.display = "flex";
+    errorMsg.classList.remove("visible");
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+    outputTitle.textContent = "Output";
+  }
+
+  dropZone.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0]);
+  });
+
+  dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+  dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+  dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag-over");
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+
+  convertBtn.addEventListener("click", async () => {
+    if (!selectedFile) return;
+
+    emptyState.style.display = "none";
+    output.classList.remove("visible");
+    errorMsg.classList.remove("visible");
+    spinner.classList.add("visible");
+    convertBtn.disabled = true;
+    copyBtn.disabled = true;
+    downloadBtn.disabled = true;
+
+    const form = new FormData();
+    form.append("file", selectedFile);
+
+    try {
+      const res = await fetch("/convert", { method: "POST", body: form });
+      const data = await res.json();
+
+      spinner.classList.remove("visible");
+
+      if (data.error) {
+        errorMsg.textContent = "Error: " + data.error;
+        errorMsg.classList.add("visible");
+      } else {
+        lastMarkdown = data.markdown;
+        lastFilename = selectedFile.name.replace(/\.[^.]+$/, "") + ".md";
+        output.textContent = data.markdown;
+        output.classList.add("visible");
+        outputTitle.textContent = data.title || "Output";
+        copyBtn.disabled = false;
+        downloadBtn.disabled = false;
+      }
+    } catch (err) {
+      spinner.classList.remove("visible");
+      errorMsg.textContent = "Network error: " + err.message;
+      errorMsg.classList.add("visible");
+    }
+
+    convertBtn.disabled = false;
+  });
+
+  copyBtn.addEventListener("click", () => {
+    navigator.clipboard.writeText(lastMarkdown).then(() => {
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 2000);
+    });
+  });
+
+  downloadBtn.addEventListener("click", () => {
+    const blob = new Blob([lastMarkdown], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = lastFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+</script>
+</body>
+</html>
